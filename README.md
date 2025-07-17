@@ -8,7 +8,7 @@ Goal is:
 - [x] Add new TIL
 - [x] Update TIL
 - [ ] User login and roles
-- [ ] Search for TILL based on catergory and title
+- [ ] Search for TILL based on category and title
 - [ ] Category view 
 - [ ] Export TIL to markdown file
 - [ ] Pagination
