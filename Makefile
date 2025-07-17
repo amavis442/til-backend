@@ -15,16 +15,16 @@ run:
 
 # Migrate against production (external DB)
 migrate-dev-up:
-	migrate -path backend/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(PROD_DB_HOST):$(PROD_DB_PORT)/$(DB_NAME)_dev?sslmode=disable" up
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)_dev?sslmode=disable" up
 
 migrate-dev-down:
-	migrate -path backend/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(PROD_DB_HOST):$(PROD_DB_PORT)/$(DB_NAME)_dev?sslmode=disable" down
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)_dev?sslmode=disable" down
 
 migrate-prod-up:
-	migrate -path backend/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(PROD_DB_HOST):$(PROD_DB_PORT)/$(DB_NAME)?sslmode=disable" up
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" up
 
 migrate-prod-down:
-	migrate -path backend/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(PROD_DB_HOST):$(PROD_DB_PORT)/$(DB_NAME)?sslmode=disable" down
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
 
 check:
 	@echo "🔍 Checking required tools..."
