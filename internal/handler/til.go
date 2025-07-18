@@ -3,45 +3,47 @@ package handler
 import (
 	"strconv"
 
-	"github.com/amavis442/til-backend/internal/domain"
+	"github.com/amavis442/til-backend/internal/til"
 	"github.com/gofiber/fiber/v2"
 )
 
-type TILHandler struct {
-	usecase domain.TILUsecase
+type TilHandler struct {
+	service til.Service
 }
 
-func NewTILHandler(u domain.TILUsecase) *TILHandler {
-	return &TILHandler{u}
+func NewTilHandler(s til.Service) *TilHandler {
+	return &TilHandler{
+		service: s,
+	}
 }
 
-func (h *TILHandler) List(c *fiber.Ctx) error {
-	tils, err := h.usecase.List()
+func (h *TilHandler) List(c *fiber.Ctx) error {
+	tils, err := h.service.List()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch TILs"})
 	}
 	return c.JSON(tils)
 }
 
-func (h *TILHandler) Create(c *fiber.Ctx) error {
-	var t domain.TIL
+func (h *TilHandler) Create(c *fiber.Ctx) error {
+	var t til.TIL
 	if err := c.BodyParser(&t); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
-	if err := h.usecase.Create(t); err != nil {
+	if err := h.service.Create(t); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save TIL"})
 	}
 	return c.SendStatus(201)
 }
 
-func (h *TILHandler) GetByID(c *fiber.Ctx) error {
+func (h *TilHandler) GetByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	til, err := h.usecase.GetByID(uint(id))
+	til, err := h.service.GetByID(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "TIL not found"})
 	}
@@ -49,21 +51,21 @@ func (h *TILHandler) GetByID(c *fiber.Ctx) error {
 	return c.JSON(til)
 }
 
-func (h *TILHandler) Update(c *fiber.Ctx) error {
+func (h *TilHandler) Update(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	var til domain.TIL
+	var til til.TIL
 	if err := c.BodyParser(&til); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
 	til.ID = uint(id) // ensure ID matches URL
 
-	updatedTIL, err := h.usecase.Update(til)
+	updatedTIL, err := h.service.Update(til)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -71,11 +73,11 @@ func (h *TILHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(updatedTIL)
 }
 
-func (h *TILHandler) Search(c *fiber.Ctx) error {
+func (h *TilHandler) Search(c *fiber.Ctx) error {
 	title := c.Query("title")
 	category := c.Query("category")
 
-	tils, err := h.usecase.Search(title, category)
+	tils, err := h.service.Search(title, category)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

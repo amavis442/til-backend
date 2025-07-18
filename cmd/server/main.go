@@ -6,14 +6,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/amavis442/til-backend/internal/auth"
+	"github.com/amavis442/til-backend/internal/handler"
+	"github.com/amavis442/til-backend/internal/middleware"
+	"github.com/amavis442/til-backend/internal/til"
+	"github.com/amavis442/til-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 
-	"github.com/amavis442/til-backend/config"
-	"github.com/amavis442/til-backend/internal/handler"
-	"github.com/amavis442/til-backend/internal/repository"
-	"github.com/amavis442/til-backend/internal/usecase"
+	"github.com/amavis442/til-backend/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -42,6 +44,9 @@ func waitForDB(dsn string, maxRetries int, delay time.Duration) *gorm.DB {
 
 func main() {
 	config.LoadEnv()
+	if err := auth.InitJWTKeys(""); err != nil {
+		log.Fatalf("failed to initialize JWT keys: %v", err)
+	}
 
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
@@ -52,9 +57,15 @@ func main() {
 
 	port := fmt.Sprint(os.Getenv("PORT"))
 
-	tilRepo := repository.NewTILRepository(db)
-	tilUsecase := usecase.NewTILUsecase(tilRepo)
-	tilHandler := handler.NewTILHandler(tilUsecase)
+	// Today I Learned (TIL)
+	tilRepo := til.NewRepository(db)
+	tilService := til.NewService(tilRepo)
+	tilHandler := handler.NewTilHandler(tilService)
+
+	// User and Auth
+	userRepo := user.NewRepository(db)
+	userService := user.NewService(userRepo)
+	authHandler := handler.NewAuthHandler(userService)
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
@@ -68,7 +79,10 @@ func main() {
 		TimeZone:   "Europe/Amsterdam",
 	}))
 
-	api := app.Group("/api")
+	app.Post("/Login", authHandler.Login)
+	app.Post("/refresh-token", authHandler.RefreshToken)
+
+	api := app.Group("/api", middleware.AuthMiddleware)
 	api.Get("/tils", tilHandler.List)
 	api.Get("/tils/search", tilHandler.Search)
 	api.Get("/tils/:id", tilHandler.GetByID)

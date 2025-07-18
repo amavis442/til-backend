@@ -11,10 +11,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/amavis442/til-backend/internal/domain"
 	"github.com/amavis442/til-backend/internal/handler"
-	"github.com/amavis442/til-backend/internal/repository"
-	"github.com/amavis442/til-backend/internal/usecase"
+	"github.com/amavis442/til-backend/internal/til"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -24,11 +22,11 @@ func setupTestApp() (*fiber.App, *gorm.DB) {
 	if err != nil {
 		panic(err)
 	}
-	db.AutoMigrate(&domain.TIL{})
+	db.AutoMigrate(&til.TIL{})
 
-	repo := repository.NewTILRepository(db)
-	uc := usecase.NewTILUsecase(repo)
-	h := handler.NewTILHandler(uc)
+	repo := til.NewRepository(db)
+	uc := til.NewService(repo)
+	h := handler.NewTilHandler(uc)
 
 	app := fiber.New()
 	api := app.Group("/api")
@@ -42,7 +40,7 @@ func TestCreateAndListTIL(t *testing.T) {
 	app, _ := setupTestApp()
 
 	// Step 1: Create a TIL via POST
-	input := domain.TIL{
+	input := til.TIL{
 		Title:    "TIL Go tests are fun",
 		Content:  "Writing tests with Fiber and GORM",
 		Category: "golang",
@@ -61,7 +59,7 @@ func TestCreateAndListTIL(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var tils []domain.TIL
+	var tils []til.TIL
 	json.NewDecoder(resp.Body).Decode(&tils)
 
 	assert.Len(t, tils, 1)
