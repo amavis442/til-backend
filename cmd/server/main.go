@@ -79,8 +79,10 @@ func main() {
 		TimeZone:   "Europe/Amsterdam",
 	}))
 
-	app.Post("/Login", authHandler.Login)
-	app.Post("/refresh-token", authHandler.RefreshToken)
+	auth := app.Group("/auth")
+	auth.Post("/register", authHandler.Register)
+	auth.Post("/Login", authHandler.Login)
+	auth.Post("/refresh-token", authHandler.RefreshToken)
 
 	api := app.Group("/api", middleware.AuthMiddleware)
 	api.Get("/tils", tilHandler.List)

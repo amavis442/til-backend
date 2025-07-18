@@ -97,8 +97,8 @@ func GenerateTokens(userID uint) (accessToken string, refreshToken string, err e
 		"typ": "refresh",
 	}
 
-	access := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	refresh := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	access := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
+	refresh := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims)
 
 	accessToken, err = access.SignedString(privateKey)
 	if err != nil {
@@ -107,6 +107,7 @@ func GenerateTokens(userID uint) (accessToken string, refreshToken string, err e
 
 	refreshToken, err = refresh.SignedString(privateKey)
 	return
+
 }
 
 func VerifyToken(tokenStr string) (jwt.MapClaims, error) {

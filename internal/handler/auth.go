@@ -83,3 +83,24 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		"refresh_token": newRefresh,
 	})
 }
+
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing fields"})
+	}
+
+	err := h.userService.Register(req.Username, req.Email, req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not register"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"succes": "User registered"})
+}

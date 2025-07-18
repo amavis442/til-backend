@@ -6,6 +6,7 @@ import (
 
 type Repository interface {
 	GetByUsername(username string) (*User, error)
+	Create(user *User) error
 	// add more DB methods here as needed
 }
 
@@ -24,4 +25,8 @@ func (r *repository) GetByUsername(username string) (*User, error) {
 		return nil, result.Error
 	}
 	return &user, nil
+}
+
+func (r *repository) Create(user *User) error {
+	return r.db.Create(&user).Error
 }

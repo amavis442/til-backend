@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -10,6 +11,7 @@ import (
 type Service interface {
 	ValidateCredentials(username, password string) (bool, uint, error)
 	GetByUsername(username string) (*User, error)
+	Register(username, email, password string) error
 }
 
 type service struct {
@@ -41,4 +43,36 @@ func (s *service) ValidateCredentials(username, password string) (bool, uint, er
 
 func (s *service) GetByUsername(username string) (*User, error) {
 	return s.repo.GetByUsername(username)
+}
+
+func (s *service) Register(username, email, password string) error {
+	// Check if user already exists
+	existing, err := s.repo.GetByUsername(username)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if existing != nil {
+		return fmt.Errorf("username already taken")
+	}
+
+	// Hash password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Create user
+	user := &User{
+		Username:     username,
+		PasswordHash: string(hashed),
+		Email:        email,
+		Role:         "ROLE_USER", // Default role
+	}
+
+	err = s.repo.Create(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

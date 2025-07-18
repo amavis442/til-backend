@@ -3,19 +3,27 @@ package handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path"
+	"strings"
 	"testing"
 
 	"github.com/amavis442/til-backend/internal/auth"
 	"github.com/amavis442/til-backend/internal/handler"
 	"github.com/amavis442/til-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockUserService struct {
 	ValidateCredentialsFunc func(username, password string) (bool, uint, error)
 	GetByUsernameFunc       func(username string) (*user.User, error)
+	RegisterFunc            func(username, email, password string) error
 }
 
 func (m *mockUserService) GetByUsername(username string) (*user.User, error) {
@@ -24,6 +32,29 @@ func (m *mockUserService) GetByUsername(username string) (*user.User, error) {
 
 func (m *mockUserService) ValidateCredentials(username, password string) (bool, uint, error) {
 	return m.ValidateCredentialsFunc(username, password)
+}
+
+func (m *mockUserService) Register(username, email, password string) error {
+	return m.RegisterFunc(username, email, password)
+}
+
+func TestMain(m *testing.M) {
+	root := "../../"
+	// Load env file before anything else
+	err := godotenv.Load(path.Join(root, ".env.local"))
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	if err := auth.InitJWTKeys(root); err != nil {
+		log.Fatalf("failed to load keys: %v", err)
+	}
+
+	// Run the tests
+	os.Exit(m.Run())
+}
+func TestEnvLoaded(t *testing.T) {
+	t.Log("JWT_PRIVATE_KEY_PATH =", os.Getenv("JWT_PRIVATE_KEY_PATH"))
 }
 
 func TestLoginHandler(t *testing.T) {
@@ -186,6 +217,70 @@ func TestRefreshTokenHandler(t *testing.T) {
 					t.Error("Expected refresh token in response")
 				}
 			}
+		})
+	}
+}
+
+func TestRegisterHandler(t *testing.T) {
+	type testCase struct {
+		name               string
+		body               string
+		setupMock          func(svc *mockUserService)
+		expectedStatusCode int
+	}
+
+	tests := []testCase{
+		{
+			name: "valid registration",
+			body: `{"username":"newuser", "email":"new@example.com", "password":"password123"}`,
+			setupMock: func(svc *mockUserService) {
+				svc.RegisterFunc = func(username, email, password string) error {
+					assert.Equal(t, "newuser", username)
+					assert.Equal(t, "new@example.com", email)
+					assert.Equal(t, "password123", password)
+					return nil
+				}
+			},
+			expectedStatusCode: fiber.StatusCreated,
+		},
+		{
+			name: "missing fields",
+			body: `{"username":"", "email":"", "password":""}`,
+			setupMock: func(svc *mockUserService) {
+				svc.RegisterFunc = func(username, email, password string) error {
+					t.Error("Register should not be called on invalid input")
+					return nil
+				}
+			},
+			expectedStatusCode: fiber.StatusBadRequest,
+		},
+		{
+			name: "internal error",
+			body: `{"username":"failuser", "email":"fail@example.com", "password":"password123"}`,
+			setupMock: func(svc *mockUserService) {
+				svc.RegisterFunc = func(username, email, password string) error {
+					return errors.New("db error")
+				}
+			},
+			expectedStatusCode: fiber.StatusInternalServerError,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app := fiber.New()
+			mockSvc := &mockUserService{}
+			tc.setupMock(mockSvc)
+
+			handler := handler.NewAuthHandler(mockSvc)
+			app.Post("/register", handler.Register)
+
+			req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedStatusCode, resp.StatusCode)
 		})
 	}
 }
