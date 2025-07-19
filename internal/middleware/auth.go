@@ -8,11 +8,19 @@ import (
 )
 
 func AuthMiddleware(c *fiber.Ctx) error {
+	var tokenStr string
+
 	authHeader := c.Get("Authorization")
-	if !strings.HasPrefix(authHeader, "Bearer ") {
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+	} else {
+		// Fallback to cookie
+		tokenStr = c.Cookies("access_token")
+	}
+
+	if tokenStr == "" {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
 	claims, err := auth.VerifyToken(tokenStr)
 	if err != nil || claims["typ"] != "access" {
