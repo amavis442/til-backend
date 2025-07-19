@@ -74,10 +74,17 @@ func (h *TilHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *TilHandler) Search(c *fiber.Ctx) error {
-	title := c.Query("title")
-	category := c.Query("category")
+	type SearchRequest struct {
+		Title    string `json:"title"`
+		Category string `json:"category"`
+	}
 
-	tils, err := h.service.Search(title, category)
+	var req SearchRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	tils, err := h.service.Search(req.Title, req.Category)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

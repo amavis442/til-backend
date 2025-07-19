@@ -86,7 +86,7 @@ func main() {
 
 	api := app.Group("/api", middleware.AuthMiddleware)
 	api.Get("/tils", tilHandler.List)
-	api.Get("/tils/search", tilHandler.Search)
+	api.Post("/tils/search", tilHandler.Search)
 	api.Get("/tils/:id", tilHandler.GetByID)
 	api.Post("/tils", tilHandler.Create)
 	api.Put("/tils/:id", tilHandler.Update)
