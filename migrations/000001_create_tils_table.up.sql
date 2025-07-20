@@ -1,0 +1,10 @@
+CREATE TABLE tils (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    title TEXT NOT NULL,
+    category TEXT,
+    content TEXT NOT NULL,
+    html TEXT
+);
