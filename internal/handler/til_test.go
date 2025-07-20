@@ -13,6 +13,7 @@ import (
 
 	"github.com/amavis442/til-backend/internal/handler"
 	"github.com/amavis442/til-backend/internal/til"
+	"github.com/amavis442/til-backend/internal/user"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -23,10 +24,11 @@ func setupTestApp() (*fiber.App, *gorm.DB) {
 		panic(err)
 	}
 	db.AutoMigrate(&til.TIL{})
-
+	userRepo := user.NewRepository(db)
 	repo := til.NewRepository(db)
 	uc := til.NewService(repo)
-	h := handler.NewTilHandler(uc)
+	userService := user.NewService(userRepo)
+	h := handler.NewTilHandler(uc, userService)
 
 	app := fiber.New()
 	api := app.Group("/api")

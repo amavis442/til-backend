@@ -24,6 +24,7 @@ type mockUserService struct {
 	ValidateCredentialsFunc func(username, password string) (bool, uint, error)
 	GetByUsernameFunc       func(username string) (*user.User, error)
 	RegisterFunc            func(username, email, password string) error
+	UserExistsFunc          func(userID uint) (bool, error)
 }
 
 func (m *mockUserService) GetByUsername(username string) (*user.User, error) {
@@ -36,6 +37,9 @@ func (m *mockUserService) ValidateCredentials(username, password string) (bool, 
 
 func (m *mockUserService) Register(username, email, password string) error {
 	return m.RegisterFunc(username, email, password)
+}
+func (m *mockUserService) UserExists(userID uint) (bool, error) {
+	return m.UserExistsFunc(userID)
 }
 
 func TestMain(m *testing.M) {

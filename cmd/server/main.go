@@ -57,15 +57,15 @@ func main() {
 
 	port := fmt.Sprint(os.Getenv("PORT"))
 
-	// Today I Learned (TIL)
-	tilRepo := til.NewRepository(db)
-	tilService := til.NewService(tilRepo)
-	tilHandler := handler.NewTilHandler(tilService)
-
 	// User and Auth
 	userRepo := user.NewRepository(db)
 	userService := user.NewService(userRepo)
 	authHandler := handler.NewAuthHandler(userService)
+
+	// Today I Learned (TIL)
+	tilRepo := til.NewRepository(db)
+	tilService := til.NewService(tilRepo)
+	tilHandler := handler.NewTilHandler(tilService, userService)
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{

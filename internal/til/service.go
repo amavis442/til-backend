@@ -21,6 +21,13 @@ func (uc *service) List() ([]TIL, error) {
 }
 
 func (uc *service) Create(t TIL) error {
+	til, err := uc.repo.FindOne(t.Title, t.Category)
+	if err != nil {
+		return err
+	}
+	if til != nil {
+		return ErrDuplicate
+	}
 	return uc.repo.Create(t)
 }
 

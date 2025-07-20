@@ -12,6 +12,7 @@ type Service interface {
 	ValidateCredentials(username, password string) (bool, uint, error)
 	GetByUsername(username string) (*User, error)
 	Register(username, email, password string) error
+	UserExists(userID uint) (bool, error)
 }
 
 type service struct {
@@ -43,6 +44,18 @@ func (s *service) ValidateCredentials(username, password string) (bool, uint, er
 
 func (s *service) GetByUsername(username string) (*User, error) {
 	return s.repo.GetByUsername(username)
+}
+
+// ExistsByID checks if a user with the given userID exists and returns true if found, otherwise false.
+func (s *service) UserExists(userID uint) (bool, error) {
+	_, err := s.repo.GetByID(userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *service) Register(username, email, password string) error {
