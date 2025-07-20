@@ -29,3 +29,4 @@ pnpm-lock.yaml
 *.exe
 *.pem
 snippets.txt
+.qodo
