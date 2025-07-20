@@ -11,6 +11,7 @@ import (
 type fakeRepo struct {
 	tList     []til.TIL
 	tListErr  error
+	countErr  error
 	createErr error
 	updateRet til.TIL
 	updateErr error
@@ -22,7 +23,7 @@ type fakeRepo struct {
 	findErr   error
 }
 
-func (f *fakeRepo) GetAll() ([]til.TIL, error) {
+func (f *fakeRepo) GetAll(limit int, offset int) ([]til.TIL, error) {
 	if f.tListErr != nil {
 		return nil, f.tListErr
 	}
@@ -43,6 +44,13 @@ func (f *fakeRepo) Search(title, category string) ([]*til.TIL, error) {
 
 func (f *fakeRepo) FindOne(title, category string) (*til.TIL, error) {
 	return f.findRet, f.findErr
+}
+
+func (f *fakeRepo) Count() (int64, error) {
+	if f.countErr != nil {
+		return 0, f.countErr
+	}
+	return int64(len(f.tList)), nil
 }
 
 // --- Additional fakeRepo for spying ---
@@ -99,7 +107,7 @@ func TestService_List(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			svc := til.NewService(&fakeRepo{tList: tt.repoData})
-			got, err := svc.List()
+			got, err := svc.List(10, 0)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -114,7 +122,7 @@ func TestService_List(t *testing.T) {
 	t.Run("repo error", func(t *testing.T) {
 		repoErr := errors.New("repo failure")
 		svc := til.NewService(&fakeRepo{tListErr: repoErr})
-		_, err := svc.List()
+		_, err := svc.List(10, 0)
 		if !errors.Is(err, repoErr) {
 			t.Errorf("expected error %v, got %v", repoErr, err)
 		}

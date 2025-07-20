@@ -1,7 +1,8 @@
 package til
 
 type Service interface {
-	List() ([]TIL, error)
+	List(limit int, offset int) ([]TIL, error)
+	ListWithCount(limit int, offset int) ([]TIL, int64, error)
 	Create(t TIL) error
 	Update(t TIL) (TIL, error)
 	GetByID(id uint) (TIL, error)
@@ -16,8 +17,20 @@ func NewService(r Repository) Service {
 	return &service{r}
 }
 
-func (uc *service) List() ([]TIL, error) {
-	return uc.repo.GetAll()
+func (uc *service) List(limit int, offset int) ([]TIL, error) {
+	return uc.repo.GetAll(limit, offset)
+}
+
+func (uc *service) ListWithCount(limit int, offset int) ([]TIL, int64, error) {
+	tils, err := uc.repo.GetAll(limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := uc.repo.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+	return tils, total, nil
 }
 
 func (uc *service) Create(t TIL) error {

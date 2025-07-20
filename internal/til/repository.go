@@ -8,12 +8,13 @@ import (
 )
 
 type Repository interface {
-	GetAll() ([]TIL, error)
+	GetAll(limit int, offset int) ([]TIL, error)
 	Create(t TIL) error
 	Update(til TIL) (TIL, error)
 	GetByID(id uint) (TIL, error)
 	Search(title, category string) ([]*TIL, error)
 	FindOne(title, category string) (*TIL, error)
+	Count() (int64, error)
 }
 
 type repository struct {
@@ -24,9 +25,9 @@ func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) GetAll() ([]TIL, error) {
+func (r *repository) GetAll(limit int, offset int) ([]TIL, error) {
 	var tils []TIL
-	err := r.db.Order("created_at desc").Find(&tils).Error
+	err := r.db.Order("created_at desc").Limit(limit).Offset(offset).Find(&tils).Error
 	return tils, err
 }
 
@@ -63,6 +64,12 @@ func (r *repository) Search(title, category string) ([]*TIL, error) {
 }
 
 // create a FindOne(title, category string)
+func (r *repository) Count() (int64, error) {
+	var count int64
+	err := r.db.Model(&TIL{}).Count(&count).Error
+	return count, err
+}
+
 func (r *repository) FindOne(title, category string) (*TIL, error) {
 	var til TIL
 

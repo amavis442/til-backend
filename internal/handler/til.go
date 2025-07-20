@@ -22,11 +22,29 @@ func NewTilHandler(s til.Service, u user.Service) *TilHandler {
 }
 
 func (h *TilHandler) List(c *fiber.Ctx) error {
-	tils, err := h.service.List()
+	limitParam := c.Query("limit", "10")
+	offsetParam := c.Query("offset", "0")
+
+	limit, err := strconv.Atoi(limitParam)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+	offset, err := strconv.Atoi(offsetParam)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	tils, total, err := h.service.ListWithCount(limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch TILs"})
 	}
-	return c.JSON(tils)
+
+	return c.JSON(fiber.Map{
+		"items": tils,
+		"total": total,
+		"limit": limit,
+		"offset": offset,
+	})
 }
 
 // For create function use a JWT cookie with user_id like in the middleware.
