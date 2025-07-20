@@ -28,3 +28,4 @@ pnpm-lock.yaml
 .env.local
 *.exe
 *.pem
+snippets.txt
