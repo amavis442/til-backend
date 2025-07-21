@@ -87,7 +87,7 @@ func GenerateTokens(userID uint) (accessToken string, refreshToken string, err e
 
 	accessClaims := jwt.MapClaims{
 		"sub": userIDStr,
-		"exp": now.Add(time.Hour).Unix(), // 1 hour access token
+		"exp": now.Add(time.Minute * 15).Unix(), // 15 minutes access token
 		"typ": "access",
 	}
 
