@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -38,8 +40,27 @@ func (m *mockUserService) ValidateCredentials(username, password string) (bool, 
 func (m *mockUserService) Register(username, email, password string) error {
 	return m.RegisterFunc(username, email, password)
 }
+
 func (m *mockUserService) UserExists(userID uint) (bool, error) {
 	return m.UserExistsFunc(userID)
+}
+
+type mockRefreshTokenService struct {
+	CreateFunc                   func(userID uint, token string) error
+	FindRefreshTokenByUserIDFunc func(userID uint) (*auth.RefreshToken, error)
+	DeleteRefreshTokenFunc       func(token string) error
+}
+
+func (m *mockRefreshTokenService) SaveRefreshToken(userID uint, token string) error {
+	return m.CreateFunc(userID, token)
+}
+
+func (m *mockRefreshTokenService) FindRefreshTokenByUserID(userID uint) (*auth.RefreshToken, error) {
+	return m.FindRefreshTokenByUserIDFunc(userID)
+}
+
+func (m *mockRefreshTokenService) DeleteRefreshToken(token string) error {
+	return m.DeleteRefreshTokenFunc(token)
 }
 
 func TestMain(m *testing.M) {
@@ -108,7 +129,14 @@ func TestLoginHandler(t *testing.T) {
 				},
 			}
 
-			h := handler.NewAuthHandler(mockSvc)
+			mockRefeshTokenSvc := &mockRefreshTokenService{
+				CreateFunc: func(userID uint, token string) error {
+					return nil
+				},
+			}
+
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			h := handler.NewAuthHandler(mockSvc, mockRefeshTokenSvc, logger)
 			app.Post("/login", h.Login)
 
 			body, _ := json.Marshal(map[string]string{
@@ -151,11 +179,34 @@ func TestRefreshTokenHandler(t *testing.T) {
 			return false, 0, nil
 		},
 	}
-	h := handler.NewAuthHandler(mockSvc)
+	userID := uint(42)
+
+	mockRefreshTokenSvc := &mockRefreshTokenService{
+		FindRefreshTokenByUserIDFunc: func(userID uint) (*auth.RefreshToken, error) {
+			token, err := auth.GenerateRefreshToken(userID)
+			if err != nil {
+				t.Fatalf("Failed to generate refresh token: %v", err)
+			}
+
+			refreshToken := auth.RefreshToken{
+				UserID: userID,
+				Token:  token,
+			}
+
+			return &refreshToken, nil
+		},
+		DeleteRefreshTokenFunc: func(token string) error {
+			return nil
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	h := handler.NewAuthHandler(mockSvc, mockRefreshTokenSvc, logger)
 	app.Post("/refresh", h.RefreshToken)
 
 	// Generate valid refresh token
-	userID := uint(42)
+	//userID := uint(42)
 	_, refreshToken, err := auth.GenerateTokens(userID)
 	if err != nil {
 		t.Fatalf("Failed to generate refresh token: %v", err)
@@ -215,7 +266,7 @@ func TestRefreshTokenHandler(t *testing.T) {
 				var data map[string]string
 				_ = json.NewDecoder(resp.Body).Decode(&data)
 				if tt.expectAccess && data["access_token"] == "" {
-					t.Error("Expected access token in response")
+					t.Error("Expected access token in response", data)
 				}
 				if tt.expectRefresh && data["refresh_token"] == "" {
 					t.Error("Expected refresh token in response")
@@ -276,7 +327,12 @@ func TestRegisterHandler(t *testing.T) {
 			mockSvc := &mockUserService{}
 			tc.setupMock(mockSvc)
 
-			handler := handler.NewAuthHandler(mockSvc)
+			mockRefeshTokenSvc := &mockRefreshTokenService{}
+
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+			handler := handler.NewAuthHandler(mockSvc, mockRefeshTokenSvc, logger)
+
 			app.Post("/register", handler.Register)
 
 			req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(tc.body))

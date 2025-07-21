@@ -81,7 +81,47 @@ func init() {
 }
 */
 
+/*
+	func GenerateTokens(userID uint) (accessToken string, refreshToken string, err error) {
+		now := time.Now()
+		userIDStr := strconv.FormatUint(uint64(userID), 10)
+
+		accessClaims := jwt.MapClaims{
+			"sub": userIDStr,
+			"exp": now.Add(time.Minute * 15).Unix(), // 15 minutes access token
+			"typ": "access",
+		}
+
+		refreshClaims := jwt.MapClaims{
+			"sub": userIDStr,
+			"exp": now.Add(7 * 24 * time.Hour).Unix(), // 1 week refresh token
+			"typ": "refresh",
+		}
+
+		access := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
+		refresh := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims)
+
+		accessToken, err = access.SignedString(privateKey)
+		if err != nil {
+			return
+		}
+
+		refreshToken, err = refresh.SignedString(privateKey)
+		return
+
+}
+*/
 func GenerateTokens(userID uint) (accessToken string, refreshToken string, err error) {
+	accessToken, err = GenerateAccessToken(userID)
+	if err != nil {
+		return
+	}
+
+	refreshToken, err = GenerateRefreshToken(userID)
+	return
+}
+
+func GenerateAccessToken(userID uint) (accessToken string, err error) {
 	now := time.Now()
 	userIDStr := strconv.FormatUint(uint64(userID), 10)
 
@@ -91,23 +131,29 @@ func GenerateTokens(userID uint) (accessToken string, refreshToken string, err e
 		"typ": "access",
 	}
 
+	access := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
+	accessToken, err = access.SignedString(privateKey)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func GenerateRefreshToken(userID uint) (refreshToken string, err error) {
+	now := time.Now()
+	userIDStr := strconv.FormatUint(uint64(userID), 10)
+
 	refreshClaims := jwt.MapClaims{
 		"sub": userIDStr,
 		"exp": now.Add(7 * 24 * time.Hour).Unix(), // 1 week refresh token
 		"typ": "refresh",
 	}
 
-	access := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
 	refresh := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims)
-
-	accessToken, err = access.SignedString(privateKey)
-	if err != nil {
-		return
-	}
 
 	refreshToken, err = refresh.SignedString(privateKey)
 	return
-
 }
 
 func VerifyToken(tokenStr string) (jwt.MapClaims, error) {
@@ -139,4 +185,46 @@ func ExtractUserIDFromClaims(claims jwt.MapClaims) (uint, error) {
 	}
 
 	return uint(id64), nil
+}
+
+func IsTokenExpired(tokenStr string) (bool, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+	if err != nil {
+		return false, err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return false, fmt.Errorf("invalid claims")
+	}
+	expVal, ok := claims["exp"]
+	if !ok {
+		return false, fmt.Errorf("no exp claim")
+	}
+	expFloat, ok := expVal.(float64)
+	if !ok {
+		return false, fmt.Errorf("exp claim is not a number")
+	}
+	expTime := time.Unix(int64(expFloat), 0)
+	return time.Now().After(expTime), nil
+}
+
+var TokenExpiresAt = func(tokenStr string) (*time.Time, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims")
+	}
+	expVal, ok := claims["exp"]
+	if !ok {
+		return nil, fmt.Errorf("no exp claim")
+	}
+	expFloat, ok := expVal.(float64)
+	if !ok {
+		return nil, fmt.Errorf("exp claim is not a number")
+	}
+	expTime := time.Unix(int64(expFloat), 0)
+	return &expTime, nil
 }

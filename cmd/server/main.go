@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/amavis442/til-backend/internal/auth"
+	"github.com/amavis442/til-backend/internal/config"
 	"github.com/amavis442/til-backend/internal/handler"
 	"github.com/amavis442/til-backend/internal/middleware"
 	"github.com/amavis442/til-backend/internal/til"
@@ -14,8 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-
-	"github.com/amavis442/til-backend/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -57,10 +57,14 @@ func main() {
 
 	port := fmt.Sprint(os.Getenv("PORT"))
 
+	slogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	// User and Auth
 	userRepo := user.NewRepository(db)
 	userService := user.NewService(userRepo)
-	authHandler := handler.NewAuthHandler(userService)
+	refreshTokenRepo := auth.NewRepository(db)
+	refreshTokenService := auth.NewService(refreshTokenRepo)
+	authHandler := handler.NewAuthHandler(userService, refreshTokenService, slogger)
 
 	// Today I Learned (TIL)
 	tilRepo := til.NewRepository(db)
