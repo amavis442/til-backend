@@ -9,9 +9,10 @@ import (
 )
 
 type mockRepository struct {
-	CreateFunc                   func(token *auth.RefreshToken) error
-	FindRefreshTokenByUserIDFunc func(userID uint) (*auth.RefreshToken, error)
-	DeleteRefreshTokenFunc       func(token string) error
+	CreateFunc                     func(token *auth.RefreshToken) error
+	FindRefreshTokenByUserIDFunc   func(userID uint) (*auth.RefreshToken, error)
+	DeleteRefreshTokenFunc         func(token string) error
+	DeleteRefreshTokenByUserIDFunc func(userID uint) error
 }
 
 func (m *mockRepository) Create(token *auth.RefreshToken) error {
@@ -31,6 +32,13 @@ func (m *mockRepository) FindRefreshTokenByUserID(userID uint) (*auth.RefreshTok
 func (m *mockRepository) DeleteRefreshToken(token string) error {
 	if m.DeleteRefreshTokenFunc != nil {
 		return m.DeleteRefreshTokenFunc(token)
+	}
+	return nil
+}
+
+func (m *mockRepository) DeleteRefreshTokenByUserID(userID uint) error {
+	if m.DeleteRefreshTokenByUserIDFunc != nil {
+		return m.DeleteRefreshTokenByUserIDFunc(userID)
 	}
 	return nil
 }

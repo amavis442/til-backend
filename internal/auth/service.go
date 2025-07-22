@@ -8,6 +8,7 @@ type Service interface {
 	SaveRefreshToken(userID uint, token string) error
 	FindRefreshTokenByUserID(userID uint) (*RefreshToken, error)
 	DeleteRefreshToken(token string) error
+	DeleteRefreshTokenByUserID(userID uint) error
 }
 
 type service struct {
@@ -42,4 +43,7 @@ func (s *service) FindRefreshTokenByUserID(userID uint) (*RefreshToken, error) {
 
 func (s *service) DeleteRefreshToken(token string) error {
 	return s.repo.DeleteRefreshToken(token)
+}
+func (s *service) DeleteRefreshTokenByUserID(userID uint) error {
+	return s.repo.DeleteRefreshTokenByUserID(userID)
 }

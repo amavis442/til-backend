@@ -42,6 +42,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
+	// Login should invalidate the old refresh token if it exists
+	// and give new tokens
+	err := h.refreshTokenService.DeleteRefreshTokenByUserID(userID)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Failed to remove old refresh token from database for userID %v: %v", userID, err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+	}
+
 	access, refresh, err := auth.GenerateTokens(userID)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to generate tokens for userID %v: %v", userID, err))
@@ -50,6 +58,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	err = h.refreshTokenService.SaveRefreshToken(userID, refresh)
 	if err != nil {
 		h.logger.Error(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -76,7 +85,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 
 	claims, err := auth.VerifyToken(req.RefreshToken)
 	if err != nil {
-		h.logger.Warn("Invalid refresh token: %v", err)
+		h.logger.Warn(fmt.Sprintf("Invalid refresh token: %v", err))
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid refresh token"})
 	}
 
@@ -99,46 +108,36 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "No valid refresh token found"})
 	}
 
-	if expired, err := auth.IsTokenExpired(refreshToken.Token); err == nil && !expired {
-		if refreshToken.Token != req.RefreshToken {
-			h.logger.Warn(fmt.Sprintf("Refresh token mismatch for userID %v", userID))
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid refresh token found"})
-		}
-
-		// Invalidate the used refresh token to prevent replay attacks
-		if err := h.refreshTokenService.DeleteRefreshToken(refreshToken.Token); err != nil {
-			h.logger.Error(fmt.Sprintf("Could not invalidate refresh token for userID %v: %v", userID, err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not invalidate refresh token"})
-		}
-		var newAccess string
-		newAccess, err = auth.GenerateAccessToken(userID)
-		if err != nil {
-			h.logger.Error(fmt.Sprintf("Could not refresh token for userID %v: %v", userID, err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not refresh token"})
-		}
-
-		return c.JSON(fiber.Map{
-			"access_token":  newAccess,
-			"refresh_token": refreshToken.Token,
-		})
-	} else {
-
-		newAccess, newRefresh, err := auth.GenerateTokens(userID)
-		if err != nil {
-			h.logger.Error(fmt.Sprintf("Could not refresh token for userID %v: %v", userID, err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not refresh token"})
-		}
-
-		if err := h.refreshTokenService.SaveRefreshToken(userID, newRefresh); err != nil {
-			h.logger.Error(fmt.Sprintf("Could not persist new refresh token for userID %v: %v", userID, err))
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not persist refresh token"})
-		}
-
-		return c.JSON(fiber.Map{
-			"access_token":  newAccess,
-			"refresh_token": newRefresh,
-		})
+	// Check if the refresh token send and that stored in the database are the same
+	if refreshToken.Token != req.RefreshToken {
+		h.logger.Warn(fmt.Sprintf("Refresh token mismatch for userID %v with token: [ %v ]", userID, req.RefreshToken))
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid refresh token found"})
 	}
+
+	// Invalidate the used refresh token to prevent replay attacks
+	if err := h.refreshTokenService.DeleteRefreshToken(refreshToken.Token); err != nil {
+		h.logger.Error(fmt.Sprintf("Could not invalidate refresh token for userID %v: %v", userID, err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not invalidate refresh token"})
+	}
+
+	// Generate tokens
+	newAccess, newRefresh, err := auth.GenerateTokens(userID)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Could not refresh token for userID %v: %v", userID, err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not refresh token"})
+	}
+
+	// Persist new refesh token
+	if err := h.refreshTokenService.SaveRefreshToken(userID, newRefresh); err != nil {
+		h.logger.Error(fmt.Sprintf("Could not persist new refresh token for userID %v: %v", userID, err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not persist refresh token"})
+	}
+
+	return c.JSON(fiber.Map{
+		"access_token":  newAccess,
+		"refresh_token": newRefresh,
+	})
+
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {

@@ -46,9 +46,10 @@ func (m *mockUserService) UserExists(userID uint) (bool, error) {
 }
 
 type mockRefreshTokenService struct {
-	CreateFunc                   func(userID uint, token string) error
-	FindRefreshTokenByUserIDFunc func(userID uint) (*auth.RefreshToken, error)
-	DeleteRefreshTokenFunc       func(token string) error
+	CreateFunc                     func(userID uint, token string) error
+	FindRefreshTokenByUserIDFunc   func(userID uint) (*auth.RefreshToken, error)
+	DeleteRefreshTokenFunc         func(token string) error
+	DeleteRefreshTokenByUserIDFunc func(userID uint) error
 }
 
 func (m *mockRefreshTokenService) SaveRefreshToken(userID uint, token string) error {
@@ -61,6 +62,10 @@ func (m *mockRefreshTokenService) FindRefreshTokenByUserID(userID uint) (*auth.R
 
 func (m *mockRefreshTokenService) DeleteRefreshToken(token string) error {
 	return m.DeleteRefreshTokenFunc(token)
+}
+
+func (m *mockRefreshTokenService) DeleteRefreshTokenByUserID(userID uint) error {
+	return m.DeleteRefreshTokenByUserIDFunc(userID)
 }
 
 func TestMain(m *testing.M) {
@@ -78,6 +83,7 @@ func TestMain(m *testing.M) {
 	// Run the tests
 	os.Exit(m.Run())
 }
+
 func TestEnvLoaded(t *testing.T) {
 	t.Log("JWT_PRIVATE_KEY_PATH =", os.Getenv("JWT_PRIVATE_KEY_PATH"))
 }
@@ -129,14 +135,14 @@ func TestLoginHandler(t *testing.T) {
 				},
 			}
 
-			mockRefeshTokenSvc := &mockRefreshTokenService{
+			mockRefreshTokenSvc := &mockRefreshTokenService{
 				CreateFunc: func(userID uint, token string) error {
 					return nil
 				},
 			}
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			h := handler.NewAuthHandler(mockSvc, mockRefeshTokenSvc, logger)
+			h := handler.NewAuthHandler(mockSvc, mockRefreshTokenSvc, logger)
 			app.Post("/login", h.Login)
 
 			body, _ := json.Marshal(map[string]string{
