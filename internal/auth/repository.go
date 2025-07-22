@@ -35,7 +35,7 @@ func (r *repository) DeleteRefreshToken(token string) error {
 	if token == "" {
 		return errors.New("refresh token must not be empty")
 	}
-	return r.db.Where("refresh_token = ?", token).Delete(&RefreshToken{}).Error
+	return r.db.Where("token = ?", token).Delete(&RefreshToken{}).Error
 }
 
 func (r *repository) DeleteRefreshTokenByUserID(userID uint) error {
