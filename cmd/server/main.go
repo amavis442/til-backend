@@ -85,7 +85,7 @@ func main() {
 
 	auth := app.Group("/auth")
 	auth.Post("/register", authHandler.Register)
-	auth.Post("/Login", authHandler.Login)
+	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh-token", authHandler.RefreshToken)
 
 	api := app.Group("/api", middleware.AuthMiddleware)

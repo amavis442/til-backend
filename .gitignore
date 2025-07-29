@@ -17,7 +17,6 @@ pnpm-lock.yaml
 .vite/
 
 # Env files
-.env
 .env.*
 
 # Editor/OS-specific
