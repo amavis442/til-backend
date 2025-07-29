@@ -1,14 +1,21 @@
 package middleware
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/amavis442/til-backend/internal/auth"
+	"github.com/amavis442/til-backend/internal/config"
 	"github.com/gofiber/fiber/v2"
 )
 
 func AuthMiddleware(c *fiber.Ctx) error {
 	var tokenStr string
+	if !config.IsProduction() {
+		cookie := c.Cookies("access_token")
+		slog.Info(fmt.Sprintf("Cookie is %v", cookie))
+	}
 
 	authHeader := c.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
@@ -16,6 +23,9 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	} else {
 		// Fallback to cookie
 		tokenStr = c.Cookies("access_token")
+	}
+	if !config.IsProduction() {
+		slog.Info(fmt.Sprintf("Middleware token string: %v", tokenStr))
 	}
 
 	if tokenStr == "" {
@@ -28,7 +38,11 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	}
 
 	userID, err := auth.ExtractUserIDFromClaims(claims)
+	if !config.IsProduction() {
+		slog.Info(fmt.Sprintf("User id is: %v", userID))
+	}
 	if err != nil {
+		slog.Info(fmt.Sprintf("Error is: %v", err))
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/amavis442/til-backend/internal/til"
@@ -22,6 +23,9 @@ func NewTilHandler(s til.Service, u user.Service) *TilHandler {
 }
 
 func (h *TilHandler) List(c *fiber.Ctx) error {
+
+	fmt.Println("Get the list")
+
 	limitParam := c.Query("limit", "10")
 	offsetParam := c.Query("offset", "0")
 
@@ -40,9 +44,9 @@ func (h *TilHandler) List(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"items": tils,
-		"total": total,
-		"limit": limit,
+		"items":  tils,
+		"total":  total,
+		"limit":  limit,
 		"offset": offset,
 	})
 }

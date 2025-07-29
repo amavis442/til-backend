@@ -3,8 +3,10 @@ package handler
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/amavis442/til-backend/internal/auth"
+	"github.com/amavis442/til-backend/internal/config"
 	"github.com/amavis442/til-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
 )
@@ -29,9 +31,14 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		Password string `json:"password"`
 	}
 
+	isProduction := config.IsProduction()
+	if !isProduction {
+		h.logger.Info("Login request")
+	}
+
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		h.logger.Warn("Failed to parse login request: %v", err)
+		h.logger.Warn(fmt.Sprintf("Failed to parse login request: %v", err))
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
@@ -61,6 +68,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
+	sameSite := "None"
+	domain := "localhost"
+	if !isProduction {
+		sameSite = "Lax"
+	}
+
+	cookie := fiber.Cookie{
+		Name:     "access_token",
+		Value:    access,
+		Expires:  time.Now().Add(time.Minute * 15),
+		HTTPOnly: true,
+		Secure:   isProduction, // Only set to true when using https://
+		Domain:   domain,
+		SameSite: sameSite,
+	}
+
+	c.Cookie(&cookie)
+
+	if !isProduction {
+		h.logger.Info(fmt.Sprintf("Access token is: %v", access))
+	}
+
 	return c.JSON(fiber.Map{
 		"access_token":  access,
 		"refresh_token": refresh,
@@ -71,6 +100,8 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	type RefreshRequest struct {
 		RefreshToken string `json:"refresh_token"`
 	}
+
+	isProduction := config.IsProduction()
 
 	var req RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -131,6 +162,28 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	if err := h.refreshTokenService.SaveRefreshToken(userID, newRefresh); err != nil {
 		h.logger.Error(fmt.Sprintf("Could not persist new refresh token for userID %v: %v", userID, err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not persist refresh token"})
+	}
+
+	sameSite := "None"
+	domain := "localhost"
+	if !isProduction {
+		sameSite = "Lax"
+	}
+
+	cookie := fiber.Cookie{
+		Name:     "access_token",
+		Value:    newAccess,
+		Expires:  time.Now().Add(time.Minute * 15),
+		HTTPOnly: true,
+		Secure:   isProduction,
+		Domain:   domain,
+		SameSite: sameSite,
+	}
+
+	c.Cookie(&cookie)
+
+	if !isProduction {
+		h.logger.Info(fmt.Sprintf("New Access token is: %v", newAccess))
 	}
 
 	return c.JSON(fiber.Map{

@@ -1,9 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -33,4 +36,18 @@ func LoadEnv() {
 func findProjectRoot() string {
 	// Optional: search upward if needed
 	return "."
+}
+
+func IsProduction() bool {
+	env := os.Getenv("ENV")
+	if env == "" {
+		panic("no enviroment set in .env.local file ENV=dev or ENV=prod")
+	}
+	env = strings.ToLower(env)
+	isProduction := true
+	if env == "dev" {
+		isProduction = false
+	}
+	slog.Info(fmt.Sprintf("Running in %v mode and flag is %v", env, isProduction))
+	return isProduction
 }
