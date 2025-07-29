@@ -111,3 +111,7 @@ http://localhost:3031/api/tils/ (POST) create a til entry
 
 http://localhost:3031/api/tils/:id (PUT) // update til entry
 ```
+
+## Start the api server
+
+> CORS_ALLOWED_ORIGIN=http://localhost:3000 cmd/server/server
