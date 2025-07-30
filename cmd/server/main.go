@@ -71,9 +71,14 @@ func main() {
 	tilService := til.NewService(tilRepo)
 	tilHandler := handler.NewTilHandler(tilService, userService)
 
+	corsAllowedOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
+	if corsAllowedOrigin == "" {
+		panic("Start the app with CORS_ALLOWED_ORIGIN=http://yourserver go run cmd/server/main.go")
+	}
+
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     os.Getenv("CORS_ALLOWED_ORIGIN"),
+		AllowOrigins:     corsAllowedOrigin,
 		AllowHeaders:     "Origin, Content-Type, Accept",
 		AllowMethods:     "GET,POST,OPTIONS,PUT",
 		AllowCredentials: true,
