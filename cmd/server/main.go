@@ -29,12 +29,12 @@ func waitForDB(dsn string, maxRetries int, delay time.Duration) *gorm.DB {
 		if err == nil {
 			sqlDB, _ := db.DB()
 			if pingErr := sqlDB.Ping(); pingErr == nil {
-				log.Println("Connected to the database.")
+				slog.Info("Connected to the database.")
 				return db
 			}
 		}
 
-		log.Printf("Waiting for database... (%d/%d)", i+1, maxRetries)
+		slog.Info(fmt.Sprintf("Waiting for database... (%d/%d)", i+1, maxRetries))
 		time.Sleep(delay)
 	}
 
@@ -43,20 +43,16 @@ func waitForDB(dsn string, maxRetries int, delay time.Duration) *gorm.DB {
 }
 
 func main() {
-	config.LoadEnv()
+	cfg := config.Load()
 	if err := auth.InitJWTKeys(""); err != nil {
 		log.Fatalf("failed to initialize JWT keys: %v", err)
 	}
 
-	dsn := os.Getenv("DB_DSN")
-	if dsn == "" {
-		log.Fatal("DB_DSN not set")
-	}
+	dsn := cfg.DB_DSN
+	port := cfg.PORT
+	corsAllowedOrigin := cfg.CORSAllowedOrigin
 
 	db := waitForDB(dsn, 10, 2*time.Second)
-
-	port := fmt.Sprint(os.Getenv("PORT"))
-
 	slogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// User and Auth
@@ -70,11 +66,6 @@ func main() {
 	tilRepo := til.NewRepository(db)
 	tilService := til.NewService(tilRepo)
 	tilHandler := handler.NewTilHandler(tilService, userService)
-
-	corsAllowedOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
-	if corsAllowedOrigin == "" {
-		panic("Start the app with CORS_ALLOWED_ORIGIN=http://yourserver go run cmd/server/main.go")
-	}
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{

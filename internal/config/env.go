@@ -11,7 +11,29 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func LoadEnv() {
+type Config struct {
+	CORSAllowedOrigin string
+	ENV               string
+	DB_DSN            string
+	PORT              string
+	// Add more vars here: DB_URL, PORT, etc.
+}
+
+var requiredEnvVars = []string{
+	"CORS_ALLOWED_ORIGIN",
+	"ENV",
+	"DB_DSN", "PORT",
+}
+
+func validateRequiredEnvVars(keys []string) {
+	for _, key := range keys {
+		if os.Getenv(key) == "" {
+			log.Fatalf("Missing required env var: %s", key)
+		}
+	}
+}
+
+func Load() Config {
 	root := findProjectRoot()
 
 	// Always load .env (default config)
@@ -30,7 +52,16 @@ func LoadEnv() {
 		os.Setenv("ENV", env)
 	}
 
-	log.Printf("Loaded environment: %s", env)
+	validateRequiredEnvVars(requiredEnvVars)
+
+	slog.Info(fmt.Sprintf("Loaded environment: %s", env))
+
+	return Config{
+		CORSAllowedOrigin: os.Getenv("CORS_ALLOWED_ORIGIN"),
+		ENV:               env,
+		DB_DSN:            os.Getenv("DB_DSN"),
+		PORT:              os.Getenv("PORT"),
+	}
 }
 
 func findProjectRoot() string {
@@ -41,13 +72,13 @@ func findProjectRoot() string {
 func IsProduction() bool {
 	env := os.Getenv("ENV")
 	if env == "" {
-		panic("no enviroment set in .env.local file ENV=dev or ENV=prod")
+		log.Fatal("no enviroment set in .env.local file ENV=dev or ENV=prod")
 	}
 	env = strings.ToLower(env)
 	isProduction := true
 	if env == "dev" {
 		isProduction = false
 	}
-	slog.Info(fmt.Sprintf("Running in %v mode and flag is %v", env, isProduction))
+
 	return isProduction
 }

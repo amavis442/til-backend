@@ -9,7 +9,7 @@ import (
 )
 
 func TestGenerateAndVerifyTokens(t *testing.T) {
-	config.LoadEnv()
+	config.Load()
 
 	assert.NotEmpty(t, os.Getenv("JWT_PRIVATE_KEY_PATH"))
 	assert.NotEmpty(t, os.Getenv("JWT_PUBLIC_KEY_PATH"))
