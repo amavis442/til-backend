@@ -114,4 +114,20 @@ http://localhost:3031/api/tils/:id (PUT) // update til entry
 
 ## Start the api server
 
-> CORS_ALLOWED_ORIGIN=http://localhost:3000 cmd/server/server
+Linux terminal
+
+> CORS_ALLOWED_ORIGIN=http://localhost cmd/server/server
+
+or
+
+> CORS_ALLOWED_ORIGIN=http://localhost go run cmd/server/main.go
+
+In powershell
+
+> ENV CORS_ALLOWED_ORIGIN=http://localhost cmd/server/server
+
+or 
+
+> ENV CORS_ALLOWED_ORIGIN=http://localhost go run cmd/server/main.go
+
+If you run a server with ip `192.168.2.60` then change `http://localhost` to `http://192.168.2.60` or `https://` reps.
