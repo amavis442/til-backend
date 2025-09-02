@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/amavis442/til-backend/internal/til"
@@ -40,15 +41,18 @@ func (h *TilHandler) List(c *fiber.Ctx) error {
 
 	tils, total, err := h.service.ListWithCount(limit, offset)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch TILs"})
+		return c.Status(500).JSON(Response[any]{Error: "Failed to fetch TILs"})
 	}
 
-	return c.JSON(fiber.Map{
-		"items":  tils,
-		"total":  total,
-		"limit":  limit,
-		"offset": offset,
-	})
+	slog.Info(fmt.Sprintf("Found %d TILs", len(tils)))
+
+	return c.JSON(
+		Response[[]til.TIL]{
+			Items:  tils,
+			Total:  total,
+			Limit:  limit,
+			Offset: offset,
+		})
 }
 
 // For create function use a JWT cookie with user_id like in the middleware.

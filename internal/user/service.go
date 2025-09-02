@@ -13,6 +13,7 @@ type Service interface {
 	GetByUsername(username string) (*User, error)
 	Register(username, email, password string) error
 	UserExists(userID uint) (bool, error)
+	UpdatePassword(userID uint, password string) error
 }
 
 type service struct {
@@ -86,6 +87,25 @@ func (s *service) Register(username, email, password string) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *service) UpdatePassword(userID uint, password string) error {
+	user, err := s.repo.GetByID(userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.New("User not found")
+	}
+
+	// Hash password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hashed)
+
+	s.repo.Update(&user)
 
 	return nil
 }

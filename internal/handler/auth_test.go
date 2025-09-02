@@ -13,13 +13,17 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amavis442/til-backend/internal/auth"
 	"github.com/amavis442/til-backend/internal/handler"
+	"github.com/amavis442/til-backend/internal/middleware"
 	"github.com/amavis442/til-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 type mockUserService struct {
@@ -27,6 +31,7 @@ type mockUserService struct {
 	GetByUsernameFunc       func(username string) (*user.User, error)
 	RegisterFunc            func(username, email, password string) error
 	UserExistsFunc          func(userID uint) (bool, error)
+	UpdatePasswordFunc      func(userID uint, password string) error
 }
 
 func (m *mockUserService) GetByUsername(username string) (*user.User, error) {
@@ -43,6 +48,33 @@ func (m *mockUserService) Register(username, email, password string) error {
 
 func (m *mockUserService) UserExists(userID uint) (bool, error) {
 	return m.UserExistsFunc(userID)
+}
+
+func (m *mockUserService) UpdatePassword(userID uint, password string) error {
+	return m.UpdatePasswordFunc(userID, password)
+}
+
+type mockUserRepository struct {
+	GetByIDFunc       func(id uint) (user.User, error)
+	UpdateFunc        func(user *user.User) error
+	CreateFunc        func(user *user.User) error
+	GetByUsernameFunc func(username string) (*user.User, error)
+}
+
+func (m *mockUserRepository) GetByID(id uint) (user.User, error) {
+	return m.GetByIDFunc(id)
+}
+
+func (m *mockUserRepository) Update(user *user.User) error {
+	return m.UpdateFunc(user)
+}
+
+func (m *mockUserRepository) Create(user *user.User) error {
+	return m.CreateFunc(user)
+}
+
+func (m *mockUserRepository) GetByUsername(username string) (*user.User, error) {
+	return m.GetByUsernameFunc(username)
 }
 
 type mockRefreshTokenService struct {
@@ -139,6 +171,9 @@ func TestLoginHandler(t *testing.T) {
 				CreateFunc: func(userID uint, token string) error {
 					return nil
 				},
+				DeleteRefreshTokenByUserIDFunc: func(userID uint) error {
+					return nil
+				},
 			}
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -202,6 +237,9 @@ func TestRefreshTokenHandler(t *testing.T) {
 			return &refreshToken, nil
 		},
 		DeleteRefreshTokenFunc: func(token string) error {
+			return nil
+		},
+		CreateFunc: func(userID uint, token string) error {
 			return nil
 		},
 	}
@@ -349,4 +387,50 @@ func TestRegisterHandler(t *testing.T) {
 			assert.Equal(t, tc.expectedStatusCode, resp.StatusCode)
 		})
 	}
+}
+
+type mockTokenVerifier struct{}
+
+func (m *mockTokenVerifier) Verify(tokenStr string) (jwt.MapClaims, error) {
+	return jwt.MapClaims{
+		"sub": "1",
+		"typ": "access",
+		"exp": float64(time.Now().Add(15 * time.Minute).Unix()),
+	}, nil
+}
+
+func (m *mockTokenVerifier) ExtractUserID(claims jwt.MapClaims) (uint, error) {
+	return 1, nil
+}
+
+func TestUpdatePasswordHandler_WithAuth(t *testing.T) {
+	app := fiber.New()
+
+	mockRepo := &mockUserRepository{
+		GetByIDFunc: func(id uint) (user.User, error) {
+			return user.User{Model: gorm.Model{ID: 1}, Username: "testuser", PasswordHash: "oldhash"}, nil
+		},
+		UpdateFunc: func(u *user.User) error {
+			assert.Equal(t, uint(1), u.ID)
+			assert.NotEqual(t, "oldhash", u.PasswordHash)
+			return nil
+		},
+	}
+
+	svc := user.NewService(mockRepo)
+	mockRefreshTokenSvc := &mockRefreshTokenService{}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := handler.NewAuthHandler(svc, mockRefreshTokenSvc, logger)
+
+	verifier := &mockTokenVerifier{}
+	app.Post("/api/change-password", middleware.AuthMiddleware(verifier), handler.UpdatePassword)
+
+	body := `{"password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/change-password", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer dummy-token")
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 }

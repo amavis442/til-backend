@@ -52,65 +52,6 @@ func InitJWTKeys(root string) error {
 	return nil
 }
 
-/*
-func init() {
-	privateKeyPath := os.Getenv("JWT_PRIVATE_KEY_PATH")
-	publicKeyPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
-
-	if privateKeyPath == "" || publicKeyPath == "" {
-		panic("JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH must be set")
-	}
-
-	privBytes, err := os.ReadFile(filepath.Clean(privateKeyPath))
-	if err != nil {
-		panic(fmt.Sprintf("could not read private key: %v", err))
-	}
-	privateKey, err = jwt.ParseRSAPrivateKeyFromPEM(privBytes)
-	if err != nil {
-		panic(fmt.Sprintf("could not parse private key: %v", err))
-	}
-
-	pubBytes, err := os.ReadFile(filepath.Clean(publicKeyPath))
-	if err != nil {
-		panic(fmt.Sprintf("could not read public key: %v", err))
-	}
-	publicKey, err = jwt.ParseRSAPublicKeyFromPEM(pubBytes)
-	if err != nil {
-		panic(fmt.Sprintf("could not parse public key: %v", err))
-	}
-}
-*/
-
-/*
-	func GenerateTokens(userID uint) (accessToken string, refreshToken string, err error) {
-		now := time.Now()
-		userIDStr := strconv.FormatUint(uint64(userID), 10)
-
-		accessClaims := jwt.MapClaims{
-			"sub": userIDStr,
-			"exp": now.Add(time.Minute * 15).Unix(), // 15 minutes access token
-			"typ": "access",
-		}
-
-		refreshClaims := jwt.MapClaims{
-			"sub": userIDStr,
-			"exp": now.Add(7 * 24 * time.Hour).Unix(), // 1 week refresh token
-			"typ": "refresh",
-		}
-
-		access := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
-		refresh := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims)
-
-		accessToken, err = access.SignedString(privateKey)
-		if err != nil {
-			return
-		}
-
-		refreshToken, err = refresh.SignedString(privateKey)
-		return
-
-}
-*/
 func GenerateTokens(userID uint) (accessToken string, refreshToken string, err error) {
 	accessToken, err = GenerateAccessToken(userID)
 	if err != nil {

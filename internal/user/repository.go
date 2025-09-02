@@ -7,6 +7,7 @@ import (
 type Repository interface {
 	GetByUsername(username string) (*User, error)
 	Create(user *User) error
+	Update(user *User) error
 	GetByID(id uint) (User, error)
 	// add more DB methods here as needed
 }
@@ -36,4 +37,8 @@ func (r *repository) GetByID(id uint) (User, error) {
 	var user User
 	result := r.db.First(&user, id)
 	return user, result.Error
+}
+
+func (r *repository) Update(user *User) error {
+	return r.db.Save(&user).Error
 }

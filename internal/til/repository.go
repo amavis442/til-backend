@@ -2,6 +2,8 @@ package til
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"strings"
 
 	"gorm.io/gorm"
@@ -33,6 +35,7 @@ func (r *repository) GetAll(limit int, offset int) ([]TIL, error) {
 
 // Validation of t TIL is done in the service layer
 func (r *repository) Create(t TIL) error {
+	slog.Info(fmt.Sprintf("Saving TIL to DB: %+v", t))
 	return r.db.Create(&t).Error
 }
 

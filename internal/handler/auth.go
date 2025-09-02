@@ -216,3 +216,23 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"succes": "User registered"})
 }
+
+func (h *AuthHandler) UpdatePassword(c *fiber.Ctx) error {
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	userIDVal := c.Locals("userID")
+	userID, ok := userIDVal.(uint)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	if err := h.userService.UpdatePassword(userID, req.Password); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"succes": "User password has been updated"})
+}

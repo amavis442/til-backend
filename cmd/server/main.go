@@ -81,17 +81,20 @@ func main() {
 		TimeZone:   "Europe/Amsterdam",
 	}))
 
-	auth := app.Group("/auth")
-	auth.Post("/register", authHandler.Register)
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh-token", authHandler.RefreshToken)
+	authGroup := app.Group("/auth")
+	authGroup.Post("/register", authHandler.Register)
+	authGroup.Post("/login", authHandler.Login)
+	authGroup.Post("/refresh-token", authHandler.RefreshToken)
 
-	api := app.Group("/api", middleware.AuthMiddleware)
-	api.Get("/tils", tilHandler.List)
-	api.Post("/tils/search", tilHandler.Search)
-	api.Get("/tils/:id", tilHandler.GetByID)
-	api.Post("/tils", tilHandler.Create)
-	api.Put("/tils/:id", tilHandler.Update)
+	verifier := &auth.JWTVerifier{}
+
+	apiGroup := app.Group("/api", middleware.AuthMiddleware(verifier))
+	apiGroup.Get("/tils", tilHandler.List)
+	apiGroup.Post("/tils/search", tilHandler.Search)
+	apiGroup.Get("/tils/:id", tilHandler.GetByID)
+	apiGroup.Post("/tils", tilHandler.Create)
+	apiGroup.Put("/tils/:id", tilHandler.Update)
+	apiGroup.Post("/change-password", authHandler.UpdatePassword)
 
 	log.Fatal(app.Listen(":" + port))
 }
