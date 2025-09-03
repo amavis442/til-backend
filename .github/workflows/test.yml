@@ -9,7 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    env:
+      JWT_PRIVATE_KEY_PATH: config/jwt/private.pem
+      JWT_PUBLIC_KEY_PATH: config/jwt/public.pem
+      ENV: dev
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -24,3 +27,4 @@ jobs:
 
     - name: Run tests
       run: go test ./... -v
+
