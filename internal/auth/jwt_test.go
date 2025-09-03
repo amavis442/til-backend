@@ -3,21 +3,17 @@ package auth_test
 import (
 	"log"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/amavis442/til-backend/internal/auth"
-	"github.com/joho/godotenv"
+	"github.com/amavis442/til-backend/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
 	root := "../../"
 	// Load env file before anything else
-	err := godotenv.Load(path.Join(root, ".env.local"))
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	config.Load()
 
 	if err := auth.InitJWTKeys(root); err != nil {
 		log.Fatalf("failed to load keys: %v", err)
