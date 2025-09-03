@@ -65,14 +65,32 @@ func Load() Config {
 }
 
 func findProjectRoot() string {
-	// Optional: search upward if needed
-	return "."
+	//return "."
+	currentDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	for {
+		goModPath := filepath.Join(currentDir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			break
+		}
+
+		parent := filepath.Dir(currentDir)
+		if parent == currentDir {
+			panic(fmt.Errorf("go.mod not found"))
+		}
+		currentDir = parent
+	}
+
+	return currentDir
 }
 
 func IsProduction() bool {
 	env := os.Getenv("ENV")
 	if env == "" {
-		log.Fatal("no enviroment set in .env.local file ENV=dev or ENV=prod")
+		log.Fatal("no environment set in .env.local file ENV=dev or ENV=prod")
 	}
 	env = strings.ToLower(env)
 	isProduction := true

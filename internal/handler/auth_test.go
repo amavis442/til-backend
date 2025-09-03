@@ -10,18 +10,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/amavis442/til-backend/internal/auth"
+	"github.com/amavis442/til-backend/internal/config"
 	"github.com/amavis442/til-backend/internal/handler"
 	"github.com/amavis442/til-backend/internal/middleware"
 	"github.com/amavis442/til-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -102,11 +101,7 @@ func (m *mockRefreshTokenService) DeleteRefreshTokenByUserID(userID uint) error 
 
 func TestMain(m *testing.M) {
 	root := "../../"
-	// Load env file before anything else
-	err := godotenv.Load(path.Join(root, ".env.local"))
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	config.Load()
 
 	if err := auth.InitJWTKeys(root); err != nil {
 		log.Fatalf("failed to load keys: %v", err)
