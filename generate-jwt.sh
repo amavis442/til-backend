@@ -5,7 +5,7 @@ set -e
 
 echo "🔧 Generating jwt key with openssl"
 
-if [ ! -d "config/jwt"]; then
+if [ ! -d "config/jwt" ]; then
     echo "First create dir config/jwt"
     exit 1;
 fi
