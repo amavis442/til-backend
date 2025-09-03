@@ -41,9 +41,8 @@ func Load() Config {
 
 	// Override with .env.local (if exists)
 	envPath := filepath.Join(root, ".env.local")
-	err := godotenv.Overload(filepath.Join(root, ".env.local"))
-	if err != nil {
-		log.Fatal("Could not find .env or .env.local in " + envPath)
+	if err := godotenv.Overload(envPath); err != nil {
+		log.Printf("No .env.local found at %s — relying on system env", envPath)
 	}
 
 	env := os.Getenv("ENV")
